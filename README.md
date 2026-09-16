@@ -53,6 +53,10 @@ python -m uboundai_gtm.cli competitive
 # from the built-in demo seed list; unreachable/non-Shopify domains are skipped, not fatal
 python -m uboundai_gtm.cli scrape --score
 
+# Bot 2 (live, any platform) — same, but accepts non-Shopify domains too via a schema.org
+# JSON-LD / Open Graph fallback (lower confidence; check the "platform" field on each result)
+python -m uboundai_gtm.cli scrape --any-platform --score
+
 # Bot 5 — demo content board, optionally checking real citations
 python -m uboundai_gtm.cli geo --check-citations
 
@@ -95,6 +99,15 @@ All 5 bots and the pipeline are tested against a `FakeLLMClient`
   Sourcing *candidate* domains at scale (vs. enriching known ones) is a
   discovery problem better solved by a store-list provider than a crawler;
   see the `scrape` CLI command above.
+- **Non-Shopify domains** are supported via `uboundai_gtm/scraping/generic_scraper.py`
+  (`scrape --any-platform`), which is a deliberately separate, lower-confidence
+  path: it tries the Shopify fast path first, then falls back to schema.org
+  Product JSON-LD, then Open Graph product tags. There's no universal
+  `/products.json` equivalent across platforms, so coverage is inconsistent
+  by nature — every result carries a `platform` field (`"shopify"` |
+  `"generic"` | `"unknown"`) so low-confidence leads can be told apart from
+  the reliable Shopify ones. This exists as a secondary net, not a pivot:
+  the core pitch and ICP stay Shopify-specific.
 - **Sentiment and hallucination detection are heuristic v1** (keyword
   counting, regex price/discontinued matching in `audit_bot.py`). Good
   enough to catch obvious cases; an LLM-as-judge pass is the natural

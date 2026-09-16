@@ -18,7 +18,7 @@ from .bots.prospecting_bot import ICPFilter, ProspectingBot
 from .data import load_prospects
 from .llm.registry import build_all_clients
 from .pipeline import run_pipeline
-from .scraping import SEED_DOMAINS, discover_from_seed_list
+from .scraping import SEED_DOMAINS, discover_from_seed_list, discover_from_seed_list_any_platform
 
 
 def _emit(data) -> None:
@@ -119,12 +119,20 @@ def cmd_geo(args: argparse.Namespace) -> None:
 
 
 def cmd_scrape(args: argparse.Namespace) -> None:
-    """Bot 2 (live): discovers real Shopify stores via direct HTTP
-    fingerprinting + `/products.json`, from the built-in demo seed list
+    """Bot 2 (live): discovers real stores from the built-in demo seed list
     (swap in your own list once you have one — same shape as
     `scraping.seed_domains.SEED_DOMAINS`). Needs real internet access; any
-    domain it can't reach or confirm as Shopify is skipped, not fatal."""
-    prospects, errors = discover_from_seed_list(SEED_DOMAINS)
+    domain it can't reach is skipped, not fatal.
+
+    Default mode requires Shopify (fingerprint + `/products.json`) and
+    rejects anything else — that's the reliable, high-confidence path.
+    `--any-platform` accepts any domain, falling back to schema.org JSON-LD
+    or Open Graph product tags when it isn't Shopify; lower-confidence, and
+    the result's `platform` field says which tier actually matched."""
+    if args.any_platform:
+        prospects, errors = discover_from_seed_list_any_platform(SEED_DOMAINS)
+    else:
+        prospects, errors = discover_from_seed_list(SEED_DOMAINS)
 
     if args.score and prospects:
         records = ProspectingBot(prospects).find_prospects()
@@ -193,6 +201,10 @@ def build_parser() -> argparse.ArgumentParser:
         "scrape", help="Bot 2 (live): discover real Shopify stores from the demo seed list"
     )
     p_scrape.add_argument("--score", action="store_true", help="Run ICP scoring on the scraped results")
+    p_scrape.add_argument(
+        "--any-platform", action="store_true",
+        help="Don't require Shopify; fall back to schema.org JSON-LD / Open Graph product tags",
+    )
     p_scrape.set_defaults(func=cmd_scrape)
 
     p_pipeline = sub.add_parser("pipeline", help="Prospecting -> Audit -> Outreach end to end")
