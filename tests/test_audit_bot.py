@@ -105,6 +105,21 @@ def test_weakest_result_prefers_unmentioned_models(fake_client):
     assert report.weakest_result.provider == "gemini"
 
 
+def test_custom_queries_override_default_shopper_templates(fake_client):
+    client = fake_client("gemini", "North Star Labs builds CyPhER for critical infrastructure.")
+    bot = AuditGenerationBot({"gemini": client})
+    custom_queries = [
+        "What are the best network detection and response solutions for critical infrastructure?",
+        "Which vendors offer signature-independent network sensing?",
+    ]
+    bot.run_audit(
+        domain="northstarlabs.ai", brand_name="North Star Labs",
+        product_category="network detection and response", queries=custom_queries,
+    )
+    assert client.calls == custom_queries
+    assert "Where should I buy" not in "".join(client.calls)
+
+
 def test_to_dict_round_trips_expected_keys(fake_client):
     bot = AuditGenerationBot({"claude": fake_client("claude", "Acme Outdoor is great.")})
     report = bot.run_audit(domain="acme.com", brand_name="Acme Outdoor", product_category="duffel bags")

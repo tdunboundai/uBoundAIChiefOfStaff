@@ -48,6 +48,7 @@ def cmd_audit(args: argparse.Namespace) -> None:
         report = bot.run_audit(
             domain=args.domain, brand_name=args.brand, product_category=args.category,
             competitors=args.competitor or [], known_facts=known_facts,
+            queries=args.query or None,
         )
     _emit(report.to_dict())
 
@@ -167,6 +168,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_audit.add_argument("--category")
     p_audit.add_argument("--competitor", action="append")
     p_audit.add_argument("--price", type=float)
+    p_audit.add_argument(
+        "--query", action="append",
+        help="Override the default shopper-style query templates (repeatable) — use "
+             "B2B evaluation phrasing for non-retail brands, e.g. "
+             "--query \"What are the best network detection tools for critical infrastructure?\"",
+    )
     p_audit.set_defaults(func=cmd_audit)
 
     p_prospect = sub.add_parser("prospect", help="Bot 2: find and score prospects")

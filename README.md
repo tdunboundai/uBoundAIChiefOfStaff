@@ -64,6 +64,26 @@ python -m uboundai_gtm.cli geo --check-citations
 python -m uboundai_gtm.cli pipeline --top-n 3
 ```
 
+### Auditing a non-retail / B2B brand
+
+The Audit Bot doesn't require Shopify or even e-commerce — it just needs a
+brand, category, and (optionally) competitors and custom queries. Default
+queries are shopper-phrased ("Where should I buy X?"), which is wrong for a
+B2B product; override them with `--query` (repeatable):
+
+```bash
+python -m uboundai_gtm.cli audit \
+  --domain northstarlabs.ai --brand "North Star Labs" \
+  --category "network detection and response for critical infrastructure" \
+  --competitor Darktrace --competitor Claroty --competitor Dragos --competitor "Nozomi Networks" \
+  --query "What are the best network detection and response (NDR) solutions for critical infrastructure and defense networks?" \
+  --query "Which vendors offer signature-independent, AI-based network sensing beyond zero trust architectures?"
+```
+
+The Prospecting/Outreach bots stay Shopify-specific by design (the Outreach
+templates literally say "Shopify" in the ad copy) — this is a Bot-1-only use
+case, not a full-pipeline one, for anything outside the Shopify ICP.
+
 Every command prints JSON to stdout.
 
 ## Tests
