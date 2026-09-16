@@ -18,6 +18,7 @@ from typing import Iterable
 
 from ..data import load_prospects
 from .audit_bot import AuditGenerationBot, AuditReport
+from .intent_bank import get_intent_bank
 
 DEFAULT_ICP_CATEGORIES = ("Outdoor", "Apparel", "Beauty")
 SWEET_SPOT_REVENUE = 3_000_000  # v1 heuristic center; see _score()
@@ -109,6 +110,7 @@ class ProspectingBot:
                     product_category=record.product_category,
                     competitors=record.competitors,
                     known_facts=record.known_facts,
+                    intent_bank=get_intent_bank(record.product_category),
                 )
                 record.audit = report
                 record.status = ProspectStatus.AUDIT_COMPLETE

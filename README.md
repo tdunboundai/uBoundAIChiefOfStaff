@@ -97,6 +97,18 @@ All 5 bots and the pipeline are tested against a `FakeLLMClient`
 
 ## Architecture notes / known limitations
 
+- **Query intent banks** (`uboundai_gtm/bots/intent_bank.py`) replace a
+  single repeated "recommend a brand" question with a curated set of
+  distinct shopper intents (price, quality, trust, use-case, ...), each
+  scored separately and surfaced as `intent_breakdown` in the audit report
+  — a brand can win on one intent and lose on another, which one merged
+  query can't see. `cosmetics` ships with 15; anything else falls back to
+  a 3-question generic default (`get_intent_bank()` picks by
+  `product_category`, case-insensitive). The CLI auto-selects a bank
+  unless `--query` is given, which always overrides for one-off/B2B
+  phrasing. A model that fails partway through a bank (a real, common
+  free-tier scenario) keeps whatever intents already succeeded instead of
+  discarding the whole audit — see `note` for "stopped after N/M intents."
 - **LLM clients** (`uboundai_gtm/llm/`) call each provider's REST API
   directly via `requests`, one thin client per provider sharing a common
   `LLMClient` interface. Add a provider by subclassing `LLMClient` (or

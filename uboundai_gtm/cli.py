@@ -13,6 +13,7 @@ import sys
 from .bots.audit_bot import AuditGenerationBot
 from .bots.competitive_bot import CompetitiveMonitoringBot
 from .bots.geo_content_bot import ContentChannel, ContentStatus, GEOContentBot
+from .bots.intent_bank import get_intent_bank
 from .bots.outreach_bot import OutreachBot
 from .bots.prospecting_bot import ICPFilter, ProspectingBot
 from .data import load_prospects
@@ -40,16 +41,26 @@ def cmd_audit(args: argparse.Namespace) -> None:
         report = bot.run_audit(
             domain=p["domain"], brand_name=p["brand_name"], product_category=p["product_category"],
             competitors=p["competitors"], known_facts=p["known_facts"],
+            intent_bank=get_intent_bank(p["product_category"]),
         )
     else:
         if not (args.domain and args.brand and args.category):
             sys.exit("--domain, --brand and --category are required when not using --prospect")
         known_facts = {"price_usd": args.price} if args.price is not None else {}
-        report = bot.run_audit(
-            domain=args.domain, brand_name=args.brand, product_category=args.category,
-            competitors=args.competitor or [], known_facts=known_facts,
-            queries=args.query or None,
-        )
+        # --query is an explicit override (e.g. B2B evaluation phrasing) and always
+        # wins; otherwise auto-pick a curated intent bank for the category, falling
+        # back to the 3-question generic default when none exists for it yet.
+        if args.query:
+            report = bot.run_audit(
+                domain=args.domain, brand_name=args.brand, product_category=args.category,
+                competitors=args.competitor or [], known_facts=known_facts, queries=args.query,
+            )
+        else:
+            report = bot.run_audit(
+                domain=args.domain, brand_name=args.brand, product_category=args.category,
+                competitors=args.competitor or [], known_facts=known_facts,
+                intent_bank=get_intent_bank(args.category),
+            )
     _emit(report.to_dict())
 
 
@@ -69,6 +80,7 @@ def cmd_outreach(args: argparse.Namespace) -> None:
     report = AuditGenerationBot(clients).run_audit(
         domain=p["domain"], brand_name=p["brand_name"], product_category=p["product_category"],
         competitors=p["competitors"], known_facts=p["known_facts"],
+        intent_bank=get_intent_bank(p["product_category"]),
     )
     copy_client = clients["claude"] if args.llm_copy else None
     package = OutreachBot(copy_client=copy_client).generate(report, p["contact"], p["product_category"])

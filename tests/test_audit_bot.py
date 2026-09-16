@@ -108,7 +108,8 @@ def test_request_error_is_caught_and_reported(fake_client):
     bot = AuditGenerationBot({"gemini": fake_client("gemini", LLMRequestError("timeout"))})
     report = bot.run_audit(domain="acme.com", brand_name="Acme Outdoor", product_category="duffel bags")
 
-    assert "request failed" in report.results[0].note
+    assert "timeout" in report.results[0].note
+    assert report.results[0].skipped is True
 
 
 def test_overall_score_is_bounded_0_to_100(fake_client):
