@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import requests
 
-from .base import LLMAnswer, LLMClient, LLMRequestError, request_with_retry
+from .base import LLMAnswer, LLMClient, LLMRequestError, redact_secrets, request_with_retry
 
 
 class OpenAICompatibleClient(LLMClient):
@@ -20,7 +20,7 @@ class OpenAICompatibleClient(LLMClient):
                 timeout=self.timeout,
             )
         except requests.RequestException as exc:
-            raise LLMRequestError(f"{self.provider} request failed: {exc}") from exc
+            raise LLMRequestError(f"{self.provider} request failed: {redact_secrets(str(exc))}") from exc
 
         data = resp.json()
         text = data.get("choices", [{}])[0].get("message", {}).get("content", "")

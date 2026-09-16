@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import requests
 
-from .base import LLMAnswer, LLMClient, LLMRequestError, request_with_retry
+from .base import LLMAnswer, LLMClient, LLMRequestError, redact_secrets, request_with_retry
 
 API_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
@@ -27,7 +27,7 @@ class GoogleClient(LLMClient):
                 timeout=self.timeout,
             )
         except requests.RequestException as exc:
-            raise LLMRequestError(f"Google request failed: {exc}") from exc
+            raise LLMRequestError(f"Google request failed: {redact_secrets(str(exc))}") from exc
 
         data = resp.json()
         try:

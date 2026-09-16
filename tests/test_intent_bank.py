@@ -125,7 +125,8 @@ def test_partial_failure_partway_through_bank_keeps_completed_intents(fake_clien
     result = report.results[0]
     assert result.skipped is False, "2 successful intents is real data, not zero"
     assert len(result.intent_results) == 2
-    assert "stopped after 2/15 intents" in result.note
+    assert "stopped after 2/15 intents" in result.coverage_note
+    assert "stopped after" not in result.note, "technical/diagnostic text must never land in the marketing-safe note"
     assert result.mentioned is True
     assert client.calls == 3  # stopped immediately on the failure, didn't skip ahead
 

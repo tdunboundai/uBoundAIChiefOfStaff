@@ -84,6 +84,30 @@ def test_all_models_skipped_produces_an_honest_placeholder_hook():
     assert report.overall_score == 0
 
 
+def test_coverage_note_never_leaks_into_generated_copy():
+    """Regression test for a real bug: a partial-audit's technical coverage_note
+    (raw provider error text, e.g. a 429 with the request URL in it) got glued
+    onto `note` and quoted verbatim in outreach copy. Outreach must only ever
+    read `.note` — never `.coverage_note` — no matter what's in it."""
+    report = _report([
+        ModelResult(
+            provider="gemini", mentioned=True, sentiment="positive", share_of_voice=0.31,
+            note="NYX mentioned more prominently",
+            coverage_note=(
+                "stopped after 10/15 intents: Google request failed: 429 Client Error: "
+                "Too Many Requests for url: https://generativelanguage.googleapis.com/"
+                "v1beta/models/gemini-2.5-flash:generateContent?key=super-secret-value"
+            ),
+        ),
+    ])
+    package = OutreachBot().generate(report, CONTACT, "cosmetics")
+
+    for leaked in ("super-secret-value", "429", "Too Many Requests", "stopped after", "Client Error"):
+        assert leaked not in package.email_body
+        assert leaked not in package.linkedin_dm
+    assert "NYX" in package.email_body
+
+
 def test_never_sends_anything_just_returns_data():
     report = _report([ModelResult(provider="claude", mentioned=True, sentiment="positive", share_of_voice=1.0)])
     package = OutreachBot().generate(report, CONTACT, "duffel bags")

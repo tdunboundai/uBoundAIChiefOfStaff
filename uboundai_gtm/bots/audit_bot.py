@@ -61,7 +61,11 @@ class ModelResult:
     mentioned: bool
     sentiment: str  # "positive" | "neutral" | "negative"
     share_of_voice: float  # 0..1 across brand + named competitor mentions
-    note: str = ""
+    note: str = ""  # marketing-safe finding only, e.g. "NYX mentioned more prominently" —
+    # this is the ONLY field the Outreach Bot may quote in generated copy.
+    coverage_note: str = ""  # technical/diagnostic only (missing key, request error,
+    # partial completion) — may contain raw provider error text; internal/report use only,
+    # never surfaced in outreach copy.
     skipped: bool = False  # True when never actually queried (no key / request failed) —
     # `mentioned=False` here means "unknown", not "genuinely checked and absent"
     intent_results: list[IntentResult] = field(default_factory=list)
@@ -133,6 +137,7 @@ class AuditReport:
                     "sentiment": r.sentiment,
                     "share_of_voice": round(r.share_of_voice, 2),
                     "note": r.note,
+                    "coverage_note": r.coverage_note,
                     "skipped": r.skipped,
                     "intent_breakdown": [ir.to_dict() for ir in r.intent_results],
                 }
@@ -210,14 +215,17 @@ class AuditGenerationBot:
             if not intent_results:
                 results.append(ModelResult(
                     provider=provider, mentioned=False, sentiment="neutral",
-                    share_of_voice=0.0, note=error_note or "no data", skipped=True,
+                    share_of_voice=0.0, note="", coverage_note=error_note or "no data", skipped=True,
                 ))
                 continue
 
             model_result = _aggregate_model_result(provider, intent_results, competitors)
             if error_note:
-                # Partial coverage, not zero — still real, audited data.
-                model_result.note = f"{model_result.note}; {error_note}" if model_result.note else error_note
+                # Partial coverage, not zero — still real, audited data. This goes in
+                # coverage_note, NEVER note: note is the only field the Outreach Bot
+                # is allowed to quote, and raw provider error text (even redacted of
+                # secrets) has no business in customer-facing copy.
+                model_result.coverage_note = error_note
             results.append(model_result)
 
         # A hallucination repeated across several query intents shouldn't show

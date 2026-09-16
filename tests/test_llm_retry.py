@@ -5,7 +5,32 @@ from unittest.mock import patch
 import pytest
 import requests
 
-from uboundai_gtm.llm.base import request_with_retry
+from uboundai_gtm.llm.base import redact_secrets, request_with_retry
+
+
+def test_redact_secrets_strips_api_key_query_param():
+    text = (
+        "HTTPSConnectionPool(host='generativelanguage.googleapis.com'): "
+        "429 Client Error: Too Many Requests for url: "
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:"
+        "generateContent?key=FAKE-TEST-KEY-not-a-real-credential-000111222"
+    )
+    redacted = redact_secrets(text)
+    assert "FAKE-TEST-KEY-not-a-real-credential" not in redacted
+    assert "key=[redacted]" in redacted
+    assert "429 Client Error" in redacted  # only the secret is stripped, not the rest
+
+
+def test_redact_secrets_handles_multiple_secret_param_names():
+    text = "url?api_key=super-secret&other=fine&token=also-secret"
+    redacted = redact_secrets(text)
+    assert "super-secret" not in redacted
+    assert "also-secret" not in redacted
+    assert "other=fine" in redacted
+
+
+def test_redact_secrets_is_a_no_op_on_clean_text():
+    assert redact_secrets("plain error, nothing sensitive here") == "plain error, nothing sensitive here"
 
 
 class FakeResponse:

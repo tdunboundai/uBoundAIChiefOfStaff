@@ -78,7 +78,8 @@ def test_missing_api_key_is_skipped_gracefully(fake_client):
     result = report.results[0]
     assert result.mentioned is False
     assert result.skipped is True
-    assert "no API key configured" in result.note
+    assert "no API key configured" in result.coverage_note
+    assert result.note == ""
 
 
 def test_unaudited_models_are_excluded_from_score_and_weakest_result(fake_client):
@@ -108,7 +109,8 @@ def test_request_error_is_caught_and_reported(fake_client):
     bot = AuditGenerationBot({"gemini": fake_client("gemini", LLMRequestError("timeout"))})
     report = bot.run_audit(domain="acme.com", brand_name="Acme Outdoor", product_category="duffel bags")
 
-    assert "timeout" in report.results[0].note
+    assert "timeout" in report.results[0].coverage_note
+    assert report.results[0].note == ""
     assert report.results[0].skipped is True
 
 

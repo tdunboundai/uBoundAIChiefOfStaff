@@ -1,6 +1,7 @@
 """Shared interface every LLM provider client implements."""
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable
@@ -8,6 +9,16 @@ from typing import Any, Callable
 import requests
 
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+
+_SECRET_QUERY_PARAM_RE = re.compile(r"([?&](?:key|api_key|token|access_token)=)[^&\s]+", re.IGNORECASE)
+
+
+def redact_secrets(text: str) -> str:
+    """Strips API keys/tokens that `requests` embeds in a URL when it stringifies
+    an exception (e.g. Google's API key is a query param) — this runs on every
+    provider error message before it's stored anywhere, since those messages end
+    up in audit reports and (indirectly) generated outreach copy."""
+    return _SECRET_QUERY_PARAM_RE.sub(r"\1[redacted]", text)
 
 
 class MissingAPIKeyError(RuntimeError):
