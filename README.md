@@ -49,6 +49,10 @@ python -m uboundai_gtm.cli outreach --prospect acme-outdoor --llm-copy
 # Bot 4 — scan tracked competitors for recent moves
 python -m uboundai_gtm.cli competitive
 
+# Bot 2 (live) — discover real Shopify stores via direct scraping (fingerprint + /products.json),
+# from the built-in demo seed list; unreachable/non-Shopify domains are skipped, not fatal
+python -m uboundai_gtm.cli scrape --score
+
 # Bot 5 — demo content board, optionally checking real citations
 python -m uboundai_gtm.cli geo --check-citations
 
@@ -74,11 +78,23 @@ All 5 bots and the pipeline are tested against a `FakeLLMClient`
   `LLMClient` interface. Add a provider by subclassing `LLMClient` (or
   `_openai_compatible.OpenAICompatibleClient` for OpenAI-shaped APIs) and
   registering it in `llm/registry.py`.
-- **Prospecting and competitor data are mocked** (`uboundai_gtm/data/*.json`).
-  Every bot reads them through `uboundai_gtm.data.load_prospects()` /
-  `load_competitors()` — swap those two functions for real sources
-  (BuiltWith, SimilarWeb, Shopify Partner API, App Store scraping, ...)
-  without touching bot logic.
+- **Prospecting and competitor data are mocked by default**
+  (`uboundai_gtm/data/*.json`), read through `uboundai_gtm.data.load_prospects()`
+  / `load_competitors()`. **`uboundai_gtm/scraping/`** is a real, working
+  alternative source for prospects: `shopify_scraper.py` confirms a domain
+  is actually Shopify (response-header/HTML fingerprint) and pulls real
+  product names/prices/stock from the unauthenticated `/products.json`
+  endpoint most stores expose, which populates `known_facts` for the Audit
+  Bot's hallucination check. It does **not** invent revenue, competitors,
+  or contact info for scraped stores — those aren't public/scrapable facts,
+  so they come back `None`/empty until a real firmographic or contact-
+  enrichment source (BuiltWith, SimilarWeb, StoreLeads, Apollo/Clearbit) is
+  wired in. `seed_domains.py` ships a small demo list of real, well-known
+  Shopify merchants standing in for a purchased store list; swap it for
+  your own once you have one — same dict shape, no code changes needed.
+  Sourcing *candidate* domains at scale (vs. enriching known ones) is a
+  discovery problem better solved by a store-list provider than a crawler;
+  see the `scrape` CLI command above.
 - **Sentiment and hallucination detection are heuristic v1** (keyword
   counting, regex price/discontinued matching in `audit_bot.py`). Good
   enough to catch obvious cases; an LLM-as-judge pass is the natural

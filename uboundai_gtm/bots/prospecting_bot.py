@@ -45,7 +45,7 @@ class ProspectRecord:
     domain: str
     brand_name: str
     category: str
-    monthly_revenue_est: float
+    monthly_revenue_est: float | None
     competitors: list[str]
     product_category: str
     known_facts: dict
@@ -82,7 +82,10 @@ class ProspectingBot:
         candidates = [
             p for p in self._raw
             if p["category"] in icp.categories
-            and icp.min_revenue <= p["monthly_revenue_est"] <= icp.max_revenue
+            and (
+                p["monthly_revenue_est"] is None
+                or icp.min_revenue <= p["monthly_revenue_est"] <= icp.max_revenue
+            )
         ]
 
         records = [
@@ -114,11 +117,18 @@ class ProspectingBot:
         return records
 
 
-def _score(revenue: float) -> int:
+UNKNOWN_REVENUE_SCORE = 65  # neutral placeholder until a scraped lead's revenue is enriched
+
+
+def _score(revenue: float | None) -> int:
     """v1 heuristic: rewards revenue near a $3M sweet spot on a log scale.
     Category weight is flat here because ICP filtering already enforces a
     match; replace with real firmographic/ad-spend/tech-stack signals once
-    a live data source is wired in."""
+    a live data source is wired in. Scraped leads (e.g. from
+    `uboundai_gtm.scraping`) don't have a revenue figure yet, so they get a
+    neutral score rather than being penalized or crashing this calculation."""
+    if revenue is None:
+        return UNKNOWN_REVENUE_SCORE
     fit = max(0.0, 1 - abs(math.log10(revenue) - math.log10(SWEET_SPOT_REVENUE)))
     return round(60 * fit + 40)
 

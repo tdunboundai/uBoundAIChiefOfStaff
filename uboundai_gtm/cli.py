@@ -18,6 +18,7 @@ from .bots.prospecting_bot import ICPFilter, ProspectingBot
 from .data import load_prospects
 from .llm.registry import build_all_clients
 from .pipeline import run_pipeline
+from .scraping import SEED_DOMAINS, discover_from_seed_list
 
 
 def _emit(data) -> None:
@@ -117,6 +118,21 @@ def cmd_geo(args: argparse.Namespace) -> None:
     _emit(bot.board())
 
 
+def cmd_scrape(args: argparse.Namespace) -> None:
+    """Bot 2 (live): discovers real Shopify stores via direct HTTP
+    fingerprinting + `/products.json`, from the built-in demo seed list
+    (swap in your own list once you have one — same shape as
+    `scraping.seed_domains.SEED_DOMAINS`). Needs real internet access; any
+    domain it can't reach or confirm as Shopify is skipped, not fatal."""
+    prospects, errors = discover_from_seed_list(SEED_DOMAINS)
+
+    if args.score and prospects:
+        records = ProspectingBot(prospects).find_prospects()
+        _emit({"prospects": [r.to_dict() for r in records], "errors": errors})
+    else:
+        _emit({"prospects": prospects, "errors": errors})
+
+
 def cmd_pipeline(args: argparse.Namespace) -> None:
     icp = ICPFilter(
         categories=tuple(args.category) if args.category else ICPFilter().categories,
@@ -172,6 +188,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Query all 5 LLMs to check if a published card is already cited",
     )
     p_geo.set_defaults(func=cmd_geo)
+
+    p_scrape = sub.add_parser(
+        "scrape", help="Bot 2 (live): discover real Shopify stores from the demo seed list"
+    )
+    p_scrape.add_argument("--score", action="store_true", help="Run ICP scoring on the scraped results")
+    p_scrape.set_defaults(func=cmd_scrape)
 
     p_pipeline = sub.add_parser("pipeline", help="Prospecting -> Audit -> Outreach end to end")
     p_pipeline.add_argument("--category", action="append")

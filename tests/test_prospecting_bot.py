@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from uboundai_gtm.bots.audit_bot import AuditGenerationBot
-from uboundai_gtm.bots.prospecting_bot import ICPFilter, ProspectingBot, ProspectStatus
+from uboundai_gtm.bots.prospecting_bot import (
+    ICPFilter,
+    ProspectingBot,
+    ProspectStatus,
+    UNKNOWN_REVENUE_SCORE,
+)
 
 RAW = [
     {
@@ -52,6 +57,19 @@ def test_default_status_is_new_with_no_audit(fake_client):
     assert records[0].status == ProspectStatus.NEW
     assert records[0].audit is None
     assert records[0].to_dict()["gap_note"] == "not yet audited"
+
+
+def test_unknown_revenue_passes_revenue_filter_and_gets_neutral_score():
+    scraped = {
+        "id": "d", "store": "D", "domain": "d.com", "brand_name": "D",
+        "category": "Outdoor", "monthly_revenue_est": None,
+        "competitors": [], "product_category": "packs",
+        "known_facts": {}, "contact": {"name": None, "email": None},
+    }
+    bot = ProspectingBot([scraped])
+    records = bot.find_prospects(ICPFilter(categories=("Outdoor",), min_revenue=1_000_000, max_revenue=5_000_000))
+    assert len(records) == 1
+    assert records[0].icp_score == UNKNOWN_REVENUE_SCORE
 
 
 def test_audit_top_n_runs_audit_and_sets_gap_note(fake_client):
