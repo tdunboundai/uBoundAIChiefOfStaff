@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import requests
 
-from .base import LLMAnswer, LLMClient, LLMRequestError
+from .base import LLMAnswer, LLMClient, LLMRequestError, request_with_retry
 
 API_URL = "https://api.anthropic.com/v1/messages"
 API_VERSION = "2023-06-01"
@@ -15,7 +15,8 @@ class AnthropicClient(LLMClient):
     def ask(self, query: str) -> LLMAnswer:
         key = self.require_key()
         try:
-            resp = requests.post(
+            resp = request_with_retry(
+                "POST",
                 API_URL,
                 headers={
                     "x-api-key": key,
@@ -29,7 +30,6 @@ class AnthropicClient(LLMClient):
                 },
                 timeout=self.timeout,
             )
-            resp.raise_for_status()
         except requests.RequestException as exc:
             raise LLMRequestError(f"Anthropic request failed: {exc}") from exc
 
