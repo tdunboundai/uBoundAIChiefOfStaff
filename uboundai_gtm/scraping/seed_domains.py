@@ -35,6 +35,11 @@ SEED_DOMAINS: list[dict] = [
         "competitors": ["e.l.f. Cosmetics", "NYX"],
     },
     {
+        "domain": "elfcosmetics.com", "brand_name": "e.l.f. Cosmetics", "category": "Beauty",
+        "product_category": "cosmetics",
+        "competitors": ["ColourPop", "NYX", "Fenty Beauty"],
+    },
+    {
         "domain": "brooklinen.com", "category": "Home",
         "product_category": "bedding",
         "competitors": ["Parachute", "Boll & Branch"],
