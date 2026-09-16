@@ -1,0 +1,61 @@
+[
+  {
+    "name": "LLMrefs",
+    "pricing": "$99–$499/mo",
+    "positioning": "Share-of-voice tracking for AI search",
+    "app_store_rating": 4.6,
+    "app_store_reviews": 212,
+    "shopify_native": true,
+    "models_tracked": 4,
+    "changelog": [
+      {"date": "2026-09-13", "note": "Added Grok to the tracked model list"},
+      {"date": "2026-08-02", "note": "Launched share-of-voice trend charts"}
+    ]
+  },
+  {
+    "name": "Shop Mentions",
+    "pricing": "$49–$199/mo",
+    "positioning": "LLM mention tracking built for Shopify",
+    "app_store_rating": 4.8,
+    "app_store_reviews": 340,
+    "shopify_native": true,
+    "models_tracked": 4,
+    "changelog": [
+      {"date": "2026-07-21", "note": "Added weekly email digests"}
+    ]
+  },
+  {
+    "name": "FSEO",
+    "pricing": "$19–$79/mo (Shopify app)",
+    "positioning": "LLMs.txt generator + AI visibility checker",
+    "app_store_rating": 4.4,
+    "app_store_reviews": 88,
+    "shopify_native": true,
+    "models_tracked": 3,
+    "changelog": [
+      {"date": "2026-09-07", "note": "Bundled schema markup generation into the base tier"}
+    ]
+  },
+  {
+    "name": "Semrush (LLM add-on)",
+    "pricing": "Bundled with Semrush plans",
+    "positioning": "LLM monitoring inside an existing SEO suite",
+    "app_store_rating": null,
+    "app_store_reviews": 0,
+    "shopify_native": false,
+    "models_tracked": 3,
+    "changelog": []
+  },
+  {
+    "name": "Lexsis",
+    "pricing": "$79–$299/mo",
+    "positioning": "AI visibility tools for Shopify stores",
+    "app_store_rating": 4.5,
+    "app_store_reviews": 56,
+    "shopify_native": true,
+    "models_tracked": 3,
+    "changelog": [
+      {"date": "2026-09-02", "note": "Repriced tiers"}
+    ]
+  }
+]

@@ -1,0 +1,59 @@
+from __future__ import annotations
+
+from uboundai_gtm.bots.audit_bot import AuditReport, ModelResult
+from uboundai_gtm.bots.outreach_bot import OutreachBot
+from uboundai_gtm.llm.base import LLMRequestError
+
+CONTACT = {"name": "Sarah Kim", "email": "sarah@acmeoutdoor.com"}
+
+
+def _report(results):
+    return AuditReport(domain="acmeoutdoor.com", brand_name="Acme Outdoor", results=results, flagged_issues=[])
+
+
+def test_template_fallback_when_no_copy_client():
+    report = _report([
+        ModelResult(provider="claude", mentioned=False, sentiment="neutral", share_of_voice=0.0),
+        ModelResult(provider="gemini", mentioned=False, sentiment="neutral", share_of_voice=0.0),
+    ])
+    package = OutreachBot(copy_client=None).generate(report, CONTACT, "duffel bags")
+
+    assert package.personalization_source == "template"
+    assert "Sarah" in package.email_body
+    assert "none of the 2 AI assistants" in package.email_body
+    assert package.to_email == "sarah@acmeoutdoor.com"
+
+
+def test_llm_copy_client_used_when_available(fake_client):
+    report = _report([ModelResult(provider="claude", mentioned=True, sentiment="positive", share_of_voice=1.0)])
+    client = fake_client("claude", "A hand-written, personalized email body.")
+    package = OutreachBot(copy_client=client).generate(report, CONTACT, "duffel bags")
+
+    assert package.personalization_source == "llm"
+    assert package.email_body == "A hand-written, personalized email body."
+    assert len(client.calls) == 1
+
+
+def test_falls_back_to_template_when_llm_call_fails(fake_client):
+    report = _report([ModelResult(provider="claude", mentioned=False, sentiment="neutral", share_of_voice=0.0)])
+    client = fake_client("claude", LLMRequestError("down"))
+    package = OutreachBot(copy_client=client).generate(report, CONTACT, "duffel bags")
+
+    assert package.personalization_source == "template"
+    assert "Sarah" in package.email_body
+
+
+def test_hook_mentions_unmentioned_models_by_name():
+    report = _report([
+        ModelResult(provider="claude", mentioned=False, sentiment="neutral", share_of_voice=0.0),
+        ModelResult(provider="gemini", mentioned=True, sentiment="neutral", share_of_voice=0.8),
+    ])
+    package = OutreachBot().generate(report, CONTACT, "duffel bags")
+    assert "claude" in package.linkedin_dm
+
+
+def test_never_sends_anything_just_returns_data():
+    report = _report([ModelResult(provider="claude", mentioned=True, sentiment="positive", share_of_voice=1.0)])
+    package = OutreachBot().generate(report, CONTACT, "duffel bags")
+    # OutreachPackage is a plain dataclass with no send/dispatch method.
+    assert not hasattr(package, "send")

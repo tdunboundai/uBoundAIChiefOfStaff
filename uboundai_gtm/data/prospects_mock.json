@@ -1,0 +1,86 @@
+[
+  {
+    "id": "acme-outdoor",
+    "store": "Acme Outdoor",
+    "domain": "acmeoutdoor.com",
+    "brand_name": "Acme Outdoor",
+    "category": "Outdoor",
+    "monthly_revenue_est": 4200000,
+    "competitors": ["TrailKing", "Basecamp Supply"],
+    "product_category": "waterproof duffel bags",
+    "known_facts": {"flagship_product": "Trailhead 40L Duffel", "price_usd": 39, "discontinued": false},
+    "contact": {"name": "Sarah Kim", "email": "sarah@acmeoutdoor.com"}
+  },
+  {
+    "id": "northline-apparel",
+    "store": "Northline Apparel",
+    "domain": "northlineapparel.com",
+    "brand_name": "Northline",
+    "category": "Apparel",
+    "monthly_revenue_est": 2800000,
+    "competitors": ["Fieldstone Co.", "Drift Outerwear"],
+    "product_category": "merino wool base layers",
+    "known_facts": {"flagship_product": "Northline Merino Crew", "price_usd": 68, "discontinued": false},
+    "contact": {"name": "Dana Ruiz", "email": "dana@northlineapparel.com"}
+  },
+  {
+    "id": "lumen-beauty",
+    "store": "Lumen Beauty Co.",
+    "domain": "lumenbeautyco.com",
+    "brand_name": "Lumen Beauty",
+    "category": "Beauty",
+    "monthly_revenue_est": 6100000,
+    "competitors": ["Glasswing Skincare", "Verve Skincare"],
+    "product_category": "vitamin C serum",
+    "known_facts": {"flagship_product": "Lumen Bright Serum", "price_usd": 42, "discontinued": false},
+    "contact": {"name": "Priya Nair", "email": "priya@lumenbeautyco.com"}
+  },
+  {
+    "id": "trailforge-gear",
+    "store": "TrailForge Gear",
+    "domain": "trailforgegear.com",
+    "brand_name": "TrailForge",
+    "category": "Outdoor",
+    "monthly_revenue_est": 1900000,
+    "competitors": ["Acme Outdoor", "Basecamp Supply"],
+    "product_category": "packable rain shells",
+    "known_facts": {"flagship_product": "TrailForge Storm Shell", "price_usd": 89, "discontinued": false},
+    "contact": {"name": "Mike Alden", "email": "mike@trailforgegear.com"}
+  },
+  {
+    "id": "verve-skincare",
+    "store": "Verve Skincare",
+    "domain": "verveskincare.com",
+    "brand_name": "Verve",
+    "category": "Beauty",
+    "monthly_revenue_est": 3400000,
+    "competitors": ["Lumen Beauty", "Glasswing Skincare"],
+    "product_category": "retinol night cream",
+    "known_facts": {"flagship_product": "Verve Renew Cream", "price_usd": 54, "discontinued": false},
+    "contact": {"name": "Alex Chen", "email": "alex@verveskincare.com"}
+  },
+  {
+    "id": "ridgeback-supply",
+    "store": "Ridgeback Supply",
+    "domain": "ridgebacksupply.com",
+    "brand_name": "Ridgeback",
+    "category": "Outdoor",
+    "monthly_revenue_est": 9000000,
+    "competitors": ["Acme Outdoor", "TrailKing"],
+    "product_category": "insulated camp coolers",
+    "known_facts": {"flagship_product": "Ridgeback 45QT Cooler", "price_usd": 249, "discontinued": false},
+    "contact": {"name": "Jordan Pine", "email": "jordan@ridgebacksupply.com"}
+  },
+  {
+    "id": "coastal-threads",
+    "store": "Coastal Threads",
+    "domain": "coastalthreads.com",
+    "brand_name": "Coastal Threads",
+    "category": "Apparel",
+    "monthly_revenue_est": 1200000,
+    "competitors": ["Northline", "Drift Outerwear"],
+    "product_category": "linen resort shirts",
+    "known_facts": {"flagship_product": "Coastal Linen Shirt", "price_usd": 58, "discontinued": false},
+    "contact": {"name": "Tara Vance", "email": "tara@coastalthreads.com"}
+  }
+]
