@@ -14,6 +14,11 @@ from dataclasses import dataclass
 from ..llm.base import LLMClient, LLMRequestError, MissingAPIKeyError
 from .audit_bot import AuditReport
 
+DISPLAY_NAMES = {
+    "claude": "Claude", "chatgpt": "ChatGPT", "gemini": "Gemini",
+    "grok": "Grok", "perplexity": "Perplexity",
+}
+
 
 @dataclass
 class OutreachPackage:
@@ -50,21 +55,24 @@ class OutreachBot:
     def generate(self, audit: AuditReport, contact: dict, product_category: str) -> OutreachPackage:
         hook = _build_hook(audit)
         first_name = (contact.get("name") or "there").split(" ")[0]
+        audited_providers = [r.provider for r in audit.audited_results]
 
-        email_body, source = self._email_body(product_category, hook, first_name)
+        email_body, source = self._email_body(product_category, hook, first_name, audited_providers)
 
         return OutreachPackage(
             to_email=contact.get("email", ""),
             subject=_subject(audit),
             email_body=email_body,
-            linkedin_dm=_linkedin_dm(hook),
+            linkedin_dm=_linkedin_dm(hook, len(audited_providers)),
             ad_headline="Is AI recommending your competitor?",
             ad_body=f"Free AI visibility check for Shopify {product_category} brands.",
             landing_headline="Your customers are asking AI where to buy this. Is it recommending you?",
             personalization_source=source,
         )
 
-    def _email_body(self, product_category: str, hook: str, first_name: str) -> tuple[str, str]:
+    def _email_body(
+        self, product_category: str, hook: str, first_name: str, audited_providers: list[str]
+    ) -> tuple[str, str]:
         if self.copy_client is not None:
             try:
                 answer = self.copy_client.ask(_copy_prompt(product_category, hook, first_name))
@@ -73,40 +81,63 @@ class OutreachBot:
                     return text, "llm"
             except (MissingAPIKeyError, LLMRequestError):
                 pass
-        return _template_email_body(product_category, hook, first_name), "template"
+        return _template_email_body(product_category, hook, first_name, audited_providers), "template"
 
 
 def _build_hook(audit: AuditReport) -> str:
-    models_checked = len(audit.results)
-    unmentioned = [r.provider for r in audit.results if not r.mentioned]
+    """Built ONLY from `audit.audited_results` — a model with no API key
+    configured is missing data, not evidence the brand is invisible there."""
+    audited = audit.audited_results
+    if not audited:
+        return f"we haven't been able to check {audit.brand_name}'s AI visibility yet"
 
-    if models_checked and len(unmentioned) == models_checked:
-        return f"none of the {models_checked} AI assistants we checked mention {audit.brand_name} at all"
+    audited_count = len(audited)
+    unmentioned = [r.provider for r in audited if not r.mentioned]
+
+    if len(unmentioned) == audited_count:
+        return f"none of the {audited_count} AI assistants we checked mention {audit.brand_name} at all"
     if unmentioned:
         return (
-            f"{len(unmentioned)} of {models_checked} AI assistants "
+            f"{len(unmentioned)} of the {audited_count} AI assistants we checked "
             f"({', '.join(unmentioned)}) don't mention {audit.brand_name} at all"
         )
     weakest = audit.weakest_result
     if weakest and weakest.note:
-        return f"on {weakest.provider}, {weakest.note.lower()}"
-    return f"{audit.brand_name}'s share of voice across {models_checked} AI assistants has room to grow"
+        # Not lowercased: notes often start with a proper noun (a competitor
+        # name), and there's no safe general way to lowercase "around" that.
+        provider_name = DISPLAY_NAMES.get(weakest.provider, weakest.provider)
+        return f"on {provider_name}, {weakest.note}"
+    return f"{audit.brand_name}'s share of voice across the {audited_count} AI assistants we checked has room to grow"
 
 
 def _subject(audit: AuditReport) -> str:
-    if audit.mentioned_count < len(audit.results):
+    audited = audit.audited_results
+    if not audited:
+        return f"A quick AI visibility check for {audit.brand_name}"
+    if audit.mentioned_count < len(audited):
         return "An AI shopping assistant is sending your customers to a competitor instead of you"
     return f"How {audit.brand_name} shows up when customers ask AI where to buy"
 
 
-def _linkedin_dm(hook: str) -> str:
-    return f"Ran your store through 5 AI shopping assistants — {hook}. Worth a look?"
+def _linkedin_dm(hook: str, audited_count: int) -> str:
+    scope = f"{audited_count} AI shopping assistant{'s' if audited_count != 1 else ''}" if audited_count else "AI shopping assistants"
+    return f"Ran your store through {scope} — {hook}. Worth a look?"
 
 
-def _template_email_body(product_category: str, hook: str, first_name: str) -> str:
+def _format_provider_names(providers: list[str]) -> str:
+    names = [DISPLAY_NAMES.get(p, p) for p in providers]
+    if not names:
+        return ""
+    if len(names) == 1:
+        return names[0]
+    return ", ".join(names[:-1]) + f" and {names[-1]}"
+
+
+def _template_email_body(product_category: str, hook: str, first_name: str, audited_providers: list[str]) -> str:
+    names = _format_provider_names(audited_providers)
+    checked = f"we asked {names}" if names else "we ran an AI visibility check"
     return (
-        f"Hi {first_name} — we asked Gemini, ChatGPT, Perplexity, Grok and Claude "
-        f"where to buy {product_category}. {hook}.\n\n"
+        f"Hi {first_name} — {checked} where to buy {product_category}. {hook}.\n\n"
         f"We ran a full AI visibility audit on your store — happy to share it, no strings attached."
     )
 

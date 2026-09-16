@@ -39,6 +39,8 @@ class ModelResult:
     sentiment: str  # "positive" | "neutral" | "negative"
     share_of_voice: float  # 0..1 across brand + named competitor mentions
     note: str = ""
+    skipped: bool = False  # True when never actually queried (no key / request failed) —
+    # `mentioned=False` here means "unknown", not "genuinely checked and absent"
     raw_answers: list[LLMAnswer] = field(default_factory=list)
 
 
@@ -50,33 +52,46 @@ class AuditReport:
     flagged_issues: list[str]
 
     @property
+    def audited_results(self) -> list[ModelResult]:
+        """Results from models that were actually queried. Every score and the
+        Outreach Bot's hook are built from this, not `results` — a model with
+        no API key configured is unaudited, not evidence of a visibility gap."""
+        return [r for r in self.results if not r.skipped]
+
+    @property
     def mentioned_count(self) -> int:
         return sum(1 for r in self.results if r.mentioned)
 
     @property
     def avg_share_of_voice(self) -> float:
-        if not self.results:
+        audited = self.audited_results
+        if not audited:
             return 0.0
-        return sum(r.share_of_voice for r in self.results) / len(self.results)
+        return sum(r.share_of_voice for r in audited) / len(audited)
 
     @property
     def overall_score(self) -> int:
-        """0-100 composite of mention rate, sentiment, and share of voice."""
-        if not self.results:
+        """0-100 composite of mention rate, sentiment, and share of voice,
+        computed only over audited models — an unaudited model is missing
+        data, not a negative signal."""
+        audited = self.audited_results
+        if not audited:
             return 0
         sentiment_points = {"positive": 1.0, "neutral": 0.5, "negative": 0.0}
-        mention_rate = self.mentioned_count / len(self.results)
-        sentiment_score = sum(sentiment_points[r.sentiment] for r in self.results) / len(self.results)
+        mention_rate = self.mentioned_count / len(audited)
+        sentiment_score = sum(sentiment_points[r.sentiment] for r in audited) / len(audited)
         score = 100 * (0.4 * mention_rate + 0.3 * sentiment_score + 0.3 * self.avg_share_of_voice)
         return round(score)
 
     @property
     def weakest_result(self) -> ModelResult | None:
-        """The model with the biggest opportunity — lowest share of voice,
-        unmentioned models first. Used by the Outreach Bot as the hook."""
-        if not self.results:
+        """The audited model with the biggest opportunity — lowest share of
+        voice, unmentioned models first. Used by the Outreach Bot as the
+        hook; never an unaudited (skipped) model."""
+        audited = self.audited_results
+        if not audited:
             return None
-        return min(self.results, key=lambda r: (r.mentioned, r.share_of_voice))
+        return min(audited, key=lambda r: (r.mentioned, r.share_of_voice))
 
     def to_dict(self) -> dict:
         return {
@@ -84,6 +99,7 @@ class AuditReport:
             "brand_name": self.brand_name,
             "overall_score": self.overall_score,
             "mentioned_count": self.mentioned_count,
+            "audited_count": len(self.audited_results),
             "model_count": len(self.results),
             "avg_share_of_voice": round(self.avg_share_of_voice, 2),
             "results": [
@@ -93,6 +109,7 @@ class AuditReport:
                     "sentiment": r.sentiment,
                     "share_of_voice": round(r.share_of_voice, 2),
                     "note": r.note,
+                    "skipped": r.skipped,
                 }
                 for r in self.results
             ],
@@ -128,13 +145,13 @@ class AuditGenerationBot:
             except MissingAPIKeyError:
                 results.append(ModelResult(
                     provider=provider, mentioned=False, sentiment="neutral",
-                    share_of_voice=0.0, note="no API key configured — skipped",
+                    share_of_voice=0.0, note="no API key configured — skipped", skipped=True,
                 ))
                 continue
             except LLMRequestError as exc:
                 results.append(ModelResult(
                     provider=provider, mentioned=False, sentiment="neutral",
-                    share_of_voice=0.0, note=f"request failed: {exc}",
+                    share_of_voice=0.0, note=f"request failed: {exc}", skipped=True,
                 ))
                 continue
 

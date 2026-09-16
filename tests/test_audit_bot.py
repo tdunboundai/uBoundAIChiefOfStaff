@@ -77,7 +77,31 @@ def test_missing_api_key_is_skipped_gracefully(fake_client):
 
     result = report.results[0]
     assert result.mentioned is False
+    assert result.skipped is True
     assert "no API key configured" in result.note
+
+
+def test_unaudited_models_are_excluded_from_score_and_weakest_result(fake_client):
+    bot = AuditGenerationBot({
+        "claude": fake_client("claude", "Acme Outdoor is a great, highly recommended brand."),
+        "chatgpt": fake_client("chatgpt", MissingAPIKeyError("no key")),
+        "gemini": fake_client("gemini", MissingAPIKeyError("no key")),
+    })
+    report = bot.run_audit(domain="acme.com", brand_name="Acme Outdoor", product_category="duffel bags")
+
+    assert len(report.audited_results) == 1
+    assert report.audited_results[0].provider == "claude"
+    # Score should reflect the one genuinely-audited, positive result — not be
+    # dragged toward zero by two models that were never actually queried.
+    assert report.overall_score > 50
+    assert report.weakest_result.provider == "claude"
+
+
+def test_request_failure_also_marks_result_as_skipped(fake_client):
+    bot = AuditGenerationBot({"perplexity": fake_client("perplexity", LLMRequestError("timeout"))})
+    report = bot.run_audit(domain="acme.com", brand_name="Acme Outdoor", product_category="duffel bags")
+    assert report.results[0].skipped is True
+    assert report.audited_results == []
 
 
 def test_request_error_is_caught_and_reported(fake_client):
@@ -125,6 +149,6 @@ def test_to_dict_round_trips_expected_keys(fake_client):
     report = bot.run_audit(domain="acme.com", brand_name="Acme Outdoor", product_category="duffel bags")
     data = report.to_dict()
     assert set(data) == {
-        "domain", "brand_name", "overall_score", "mentioned_count",
+        "domain", "brand_name", "overall_score", "mentioned_count", "audited_count",
         "model_count", "avg_share_of_voice", "results", "flagged_issues",
     }

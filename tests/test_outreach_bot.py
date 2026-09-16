@@ -52,6 +52,38 @@ def test_hook_mentions_unmentioned_models_by_name():
     assert "claude" in package.linkedin_dm
 
 
+def test_skipped_models_are_never_claimed_as_a_visibility_gap():
+    """Regression test for a real bug: an unaudited model (no API key) was
+    being counted as "doesn't mention the brand", producing a false claim
+    like "4 of 5 AI assistants don't mention you" when 4 were never asked."""
+    report = _report([
+        ModelResult(provider="claude", mentioned=False, sentiment="neutral", share_of_voice=0.0, skipped=True),
+        ModelResult(provider="chatgpt", mentioned=False, sentiment="neutral", share_of_voice=0.0, skipped=True),
+        ModelResult(provider="gemini", mentioned=True, sentiment="positive", share_of_voice=0.33,
+                    note="Fenty Beauty mentioned more prominently"),
+        ModelResult(provider="grok", mentioned=False, sentiment="neutral", share_of_voice=0.0, skipped=True),
+        ModelResult(provider="perplexity", mentioned=False, sentiment="neutral", share_of_voice=0.0, skipped=True),
+    ])
+    package = OutreachBot().generate(report, CONTACT, "cosmetics")
+
+    assert "4 of 5" not in package.email_body
+    assert "don't mention" not in package.email_body
+    assert "Fenty Beauty" in package.email_body
+    # Only the actually-audited provider should be named as "asked".
+    assert "Gemini" in package.email_body
+    for unaudited in ("ChatGPT", "Grok", "Perplexity", "Claude"):
+        assert unaudited not in package.email_body
+
+
+def test_all_models_skipped_produces_an_honest_placeholder_hook():
+    report = _report([
+        ModelResult(provider="claude", mentioned=False, sentiment="neutral", share_of_voice=0.0, skipped=True),
+    ])
+    package = OutreachBot().generate(report, CONTACT, "duffel bags")
+    assert "haven't been able to check" in package.email_body
+    assert report.overall_score == 0
+
+
 def test_never_sends_anything_just_returns_data():
     report = _report([ModelResult(provider="claude", mentioned=True, sentiment="positive", share_of_voice=1.0)])
     package = OutreachBot().generate(report, CONTACT, "duffel bags")
